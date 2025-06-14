@@ -14,7 +14,7 @@ jobs:
         with:
           submodules: 'recursive'
 
-      - name: Install Dependencies
+      - name: Install Build Tools
         run: |
           brew install ldid xz
 
@@ -23,20 +23,19 @@ jobs:
           export THEOS=~/theos
           git clone --recursive https://github.com/theos/theos.git $THEOS
 
-      - name: Download Dependencies
+      - name: Force Download All Dependencies
         run: |
+          # Force init all git submodules (like SSZipArchive)
+          git submodule update --init --recursive
+          # Manually clone KittyMemory as it's not a submodule
           rm -rf deps/KittyMemory
           git clone https://github.com/MJx0/KittyMemory.git deps/KittyMemory
 
-      - name: Patch Makefile
+      - name: Verify Dependencies are Present
         run: |
-          sed -i '' 's|../deps/KittyMemory/KittyMemory|../deps/KittyMemory|g' Tweak/Makefile
-      
-      - name: Verify Makefile Patch
-        run: |
-          echo "--- Contents of Tweak/Makefile after patching ---"
-          cat Tweak/Makefile
-          echo "-------------------------------------------------"
+          echo "--- Verifying contents of deps directory ---"
+          ls -R deps
+          echo "------------------------------------------"
           
       - name: Build Tweak
         run: |
