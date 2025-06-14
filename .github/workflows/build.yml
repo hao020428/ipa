@@ -80,9 +80,18 @@ jobs:
         if [ -d "Tweak" ]; then
           echo "Found Tweak directory at root level"
           ls -la Tweak
+          
+          # 检查Utils目录
+          if [ -d "Tweak/src/Utils" ]; then
+            echo "Found Utils directory:"
+            ls -la Tweak/src/Utils
+          fi
         fi
         # 查找所有Tweak目录
         find . -type d -name "Tweak" | xargs -I{} echo "Found Tweak directory: {}"
+        
+        # 查找ProgressUtils.hpp文件
+        find . -name "ProgressUtils.hpp" | xargs -I{} echo "Found ProgressUtils.hpp: {}"
     
     - name: Check include paths
       run: |
@@ -100,7 +109,7 @@ jobs:
         fi
         echo "Found Tweak directory at: $TWEAK_DIR"
         
-        # 创建临时Makefile确保包含KittyMemory路径
+        # 创建临时Makefile确保包含所有必要路径
         KITTY_PATHS=$(find . -name "KittyMemory" -type d)
         if [ -n "$KITTY_PATHS" ]; then
           KITTY_PATH=$(echo "$KITTY_PATHS" | head -n 1)
@@ -110,19 +119,53 @@ jobs:
           if [ -f "$TWEAK_DIR/Makefile" ]; then
             cp "$TWEAK_DIR/Makefile" "$TWEAK_DIR/Makefile.bak"
             
-            # 添加KittyMemory到include路径
+            # 添加所有必要的include路径
             echo "" >> "$TWEAK_DIR/Makefile"
             echo "# Added by GitHub Actions" >> "$TWEAK_DIR/Makefile"
             echo "UEDumper_CFLAGS += -I$KITTY_PATH" >> "$TWEAK_DIR/Makefile"
             echo "UEDumper_CFLAGS += -I$(dirname $KITTY_PATH)" >> "$TWEAK_DIR/Makefile"
             
+            # 添加Tweak的src目录到include路径（这样就可以找到Utils目录）
+            echo "UEDumper_CFLAGS += -I$TWEAK_DIR" >> "$TWEAK_DIR/Makefile"
+            echo "UEDumper_CFLAGS += -I$TWEAK_DIR/src" >> "$TWEAK_DIR/Makefile"
+            
+            # 添加其他可能需要的include路径
+            echo "UEDumper_CCFLAGS += -I$TWEAK_DIR -I$TWEAK_DIR/src" >> "$TWEAK_DIR/Makefile"
+            
+            # 显示修改后的Makefile
+            echo "Modified Makefile:"
             cat "$TWEAK_DIR/Makefile"
           fi
         fi
         
+        # 检查文件和环境的更多信息
+        echo "Environment variables:"
+        env
+        
+        # 尝试编译
         cd "$TWEAK_DIR"
         make clean
-        make package
+        
+        # 编译前额外修复可能的问题
+        # 1. 创建符号链接，确保头文件可以被找到
+        if [ -d "$TWEAK_DIR/src/Utils" ] && [ ! -L "$TWEAK_DIR/Utils" ]; then
+          echo "Creating symlink for Utils directory"
+          ln -sf "$TWEAK_DIR/src/Utils" "$TWEAK_DIR/Utils"
+        fi
+        
+        # 2. 检查和显示关键文件
+        find "$TWEAK_DIR" -name "*.hpp" | sort
+        
+        # 3. 直接修改源代码中的包含路径（如果必要）
+        if [ -f "$TWEAK_DIR/src/Dumper.hpp" ]; then
+          echo "Modifying include paths in Dumper.hpp"
+          sed -i '' 's|"Utils/ProgressUtils.hpp"|"src/Utils/ProgressUtils.hpp"|g' "$TWEAK_DIR/src/Dumper.hpp"
+          # 显示更改
+          cat "$TWEAK_DIR/src/Dumper.hpp" | grep -A 2 -B 2 "ProgressUtils.hpp"
+        fi
+        
+        # 最后尝试构建
+        make package THEOS_PACKAGE_DIR_NAME=build
     
     - name: Archive production artifacts
       uses: actions/upload-artifact@v4
@@ -130,6 +173,7 @@ jobs:
         name: UEDumper-package
         path: |
           **/packages/*.deb
+          **/build/*.deb
     
     - name: Create Release
       if: startsWith(github.ref, 'refs/tags/')
@@ -138,6 +182,7 @@ jobs:
       with:
         files: |
           **/packages/*.deb
+          **/build/*.deb
         name: Release ${{ github.ref_name }}
         draft: false
         prerelease: false 
