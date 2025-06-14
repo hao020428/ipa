@@ -50,6 +50,26 @@ jobs:
               $(ABSOLUTE_DEPS_PATH)/SSZipArchive/minizip/mz_zip_rw.c \
               $(ABSOLUTE_DEPS_PATH)/SSZipArchive/minizip/mz_compat.c
 
+          # Use the 'override' directive. This is a GNU Make feature that prevents
+          # the variable from being overridden by Theos's internal Makefiles.
+          # This is our last and most powerful tool.
+          COMMON_FLAGS = \
+              -std=c++17 \
+              -fobjc-arc-exceptions \
+              -Wno-deprecated-declarations \
+              -I$(ABSOLUTE_DEPS_PATH) \
+              -I$(ABSOLUTE_DEPS_PATH)/KittyMemory/KittyMemory \
+              -I$(ABSOLUTE_DEPS_PATH)/fmt \
+              -I$(ABSOLUTE_DEPS_PATH)/hash \
+              -I$(ABSOLUTE_DEPS_PATH)/nlohmann \
+              -I$(ABSOLUTE_DEPS_PATH)/SSZipArchive/minizip \
+              -I$(ABSOLUTE_DEPS_PATH)/utfcpp
+
+          override CFLAGS += $(COMMON_FLAGS)
+          override CXXFLAGS += $(COMMON_FLAGS)
+          override OBJCFLAGS += $(COMMON_FLAGS)
+          override OBJCXXFLAGS += $(COMMON_FLAGS)
+
           include $(THEOS)/makefiles/common.mk
           include $(THEOS)/makefiles/tweak.mk
 
@@ -58,34 +78,11 @@ jobs:
           EOF
         shell: bash
 
-      - name: Debug Build Environment
-        run: |
-          echo "--- Final Tweak/Makefile content ---"
-          cat Tweak/Makefile
-          echo "--- Recursive file list from Tweak/ directory ---"
-          ls -laR Tweak/
-          echo "------------------------------------------------"
-        shell: bash
-
       - name: Build Tweak
         id: build
         run: |
           cd Tweak
-
-          # Define all compiler flags in a variable. These will be passed directly to make
-          # using Theos's global 'ADDITIONAL' flags, which is the most robust method to avoid being ignored.
-          export FLAGS="-std=c++17 -fobjc-arc-exceptions -Wno-deprecated-declarations"
-          export FLAGS="$FLAGS -I../deps -I../deps/KittyMemory/KittyMemory -I../deps/fmt"
-          export FLAGS="$FLAGS -I../deps/hash -I../deps/nlohmann -I../deps/SSZipArchive/minizip -I../deps/utfcpp"
-
-          # Execute the build, passing the flags on the command line to Theos's global variables.
-          # This is the definitive way to ensure flags are respected.
-          make clean all messages=yes \
-            "ADDITIONAL_CFLAGS=$FLAGS" \
-            "ADDITIONAL_CXXFLAGS=$FLAGS" \
-            "ADDITIONAL_OBJCFLAGS=$FLAGS" \
-            "ADDITIONAL_OBJCXXFLAGS=$FLAGS"
-
+          make clean all messages=yes
           echo "tweak_path=$(ls -t packages/*.deb 2>/dev/null | head -n1)" >> $GITHUB_OUTPUT
 
       - name: Upload Artifact
