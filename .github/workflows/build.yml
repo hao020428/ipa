@@ -16,7 +16,7 @@ jobs:
 
       - name: Install Build Dependencies
         run: |
-          brew install ldid xz gnu-make
+          brew install ldid xz make
 
       - name: Setup Theos
         run: |
@@ -77,7 +77,7 @@ jobs:
         run: |
           export THEOS=~/theos
           cd Tweak
-          # Use gmake for better parallel builds as suggested by the log
+          # Use gmake for better parallel builds
           gmake package THEOS=~/theos -j$(sysctl -n hw.ncpu)
 
       - name: Upload Artifact
