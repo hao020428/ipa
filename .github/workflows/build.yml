@@ -21,17 +21,24 @@ jobs:
       with:
         xcode-version: '15.2'  # 更新为更新版本的Xcode
     
-    - name: Install dependencies
+    - name: Install ldid
+      run: brew install ldid  # 用于签名iOS二进制文件
+    
+    - name: Install Theos
       run: |
-        brew install ldid  # 用于签名iOS二进制文件
-        brew install theos/tap/theos  # 安装Theos (用于越狱iOS开发)
+        git clone --recursive https://github.com/theos/theos.git $HOME/theos
+        brew install ldid xz
+        curl -LO https://github.com/theos/sdks/archive/master.zip
+        unzip -q master.zip
+        mv sdks-master/*.sdk $HOME/theos/sdks/
+        rm -rf sdks-master master.zip
     
     - name: Set up Theos environment
       run: |
-        export THEOS=$(brew --prefix theos)
-        echo "THEOS=$THEOS" >> $GITHUB_ENV
+        echo "THEOS=$HOME/theos" >> $GITHUB_ENV
         echo "THEOS_DEVICE_IP=127.0.0.1" >> $GITHUB_ENV
         echo "THEOS_DEVICE_PORT=2222" >> $GITHUB_ENV
+        echo "PATH=$HOME/theos/bin:$PATH" >> $GITHUB_ENV
     
     - name: Build project
       run: |
