@@ -17,8 +17,20 @@ jobs:
       - name: Setup Theos
         uses: Randomblock1/theos-action@v1
 
-      - name: Force Update Submodules
-        run: git submodule update --init --recursive
+      - name: Prepare Build Environment by Cloning Missing Deps
+        run: |
+          # The submodule checkout is unreliable, so we clone it manually.
+          git clone https://github.com/MJNONCS/KittyMemory.git deps/KittyMemory/
+          echo "Copying all dependencies into a local 'includes' directory to bypass Theos path issues..."
+          mkdir -p Tweak/includes
+          # Copy all dependency headers into the local includes directory
+          cp -R deps/KittyMemory/KittyMemory/* Tweak/includes/
+          cp -R deps/fmt Tweak/includes/
+          cp -R deps/hash Tweak/includes/
+          cp -R deps/nlohmann Tweak/includes/
+          cp -R deps/SSZipArchive Tweak/includes/
+          cp -R deps/utfcpp Tweak/includes/
+          echo "Done copying dependencies."
         shell: bash
 
       - name: Debug File System Before Copy
@@ -79,20 +91,6 @@ jobs:
           after-install::
           	install.exec "sbreload"
           EOF
-        shell: bash
-
-      - name: Prepare Build Environment by Copying Dependencies
-        run: |
-          echo "Copying all dependencies into a local 'includes' directory to bypass Theos path issues..."
-          mkdir -p Tweak/includes
-          # Copy all dependency headers into the local includes directory
-          cp -R deps/KittyMemory/KittyMemory/* Tweak/includes/ || echo "KittyMemory copy failed, continuing..."
-          cp -R deps/fmt Tweak/includes/
-          cp -R deps/hash Tweak/includes/
-          cp -R deps/nlohmann Tweak/includes/
-          cp -R deps/SSZipArchive Tweak/includes/
-          cp -R deps/utfcpp Tweak/includes/
-          echo "Done copying dependencies."
         shell: bash
 
       - name: Build Tweak
