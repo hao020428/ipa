@@ -40,35 +40,36 @@ jobs:
               src/Utils/KittyAlertView.mm \
               ../deps/SSZipArchive/SSZipArchive.m
 
-          # Add all required include paths and compiler flags for C++
-          # Note: We use -I../deps because Tweak.mm uses #import <SSZipArchive/ZipArchive.h>
-          UEDumper_CXXFLAGS = \
-              -I../deps \
-              -I../deps/KittyMemory/KittyMemory \
-              -I../deps/fmt \
-              -I../deps/hash \
-              -I../deps/nlohmann \
-              -I../deps/SSZipArchive/minizip \
-              -I../deps/utfcpp \
+          # Use += to append flags and build absolute paths to ensure they are not ignored by Theos.
+          # This is the most robust way to declare compiler flags.
+          ABSOLUTE_DEPS_PATH = $(THEOS_PROJECT_DIR)/../deps
+
+          COMMON_FLAGS = \
               -std=c++17 \
               -Wno-deprecated-declarations \
-              -fobjc-arc-exceptions
+              -fobjc-arc-exceptions \
+              -I"$(ABSOLUTE_DEPS_PATH)/KittyMemory/KittyMemory" \
+              -I"$(ABSOLUTE_DEPS_PATH)/fmt" \
+              -I"$(ABSOLUTE_DEPS_PATH)/hash" \
+              -I"$(ABSOLUTE_DEPS_PATH)/nlohmann" \
+              -I"$(ABSOLUTE_DEPS_PATH)/SSZipArchive/minizip" \
+              -I"$(ABSOLUTE_DEPS_PATH)/utfcpp" \
+              -I"$(ABSOLUTE_DEPS_PATH)"
 
-          # Objective-C++ files also need the C++ flags
-          UEDumper_OBJCXXFLAGS = $(UEDumper_CXXFLAGS)
-          UEDumper_OBJCFLAGS = $(UEDumper_CXXFLAGS)
+          UEDumper_CXXFLAGS += $(COMMON_FLAGS)
+          UEDumper_OBJCXXFLAGS += $(COMMON_FLAGS)
+          UEDumper_OBJCFLAGS += $(COMMON_FLAGS)
 
           # Add minizip source files to be compiled with the tweak
-          UEDumper_CFLAGS = \
-              -I../deps/SSZipArchive/minizip
+          UEDumper_CFLAGS += -I"$(ABSOLUTE_DEPS_PATH)/SSZipArchive/minizip"
           UEDumper_FILES += \
-              ../deps/SSZipArchive/minizip/mz_crypt.c \
-              ../deps/SSZipArchive/minizip/mz_os.c \
-              ../deps/SSZipArchive/minizip/mz_strm.c \
-              ../deps/SSZipArchive/minizip/mz_zip.c \
-              ../deps/SSZipArchive/minizip/mz_zip_rw.c \
-              ../deps/SSZipArchive/minizip/mz_compat.c
-
+              $(ABSOLUTE_DEPS_PATH)/SSZipArchive/minizip/mz_crypt.c \
+              $(ABSOLUTE_DEPS_PATH)/SSZipArchive/minizip/mz_os.c \
+              $(ABSOLUTE_DEPS_PATH)/SSZipArchive/minizip/mz_strm.c \
+              $(ABSOLUTE_DEPS_PATH)/SSZipArchive/minizip/mz_zip.c \
+              $(ABSOLUTE_DEPS_PATH)/SSZipArchive/minizip/mz_zip_rw.c \
+              $(ABSOLUTE_DEPS_PATH)/SSZipArchive/minizip/mz_compat.c
+          
           # Linker flags (if needed in the future)
           UEDumper_LDFLAGS =
 
