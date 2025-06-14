@@ -15,9 +15,7 @@ jobs:
           submodules: 'recursive'
 
       - name: Setup Theos
-        uses: kabiroberai/theos-action@v1
-        with:
-          theos_version: '5.1.1'
+        uses: Randomblock1/theos-action@v1
 
       - name: Create Correct Makefile
         run: |
