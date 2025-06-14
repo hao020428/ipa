@@ -30,7 +30,7 @@ jobs:
           make package THEOS=~/theos
 
       - name: Upload Artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: iOS_UEDumper-deb
           path: Tweak/packages/*.deb
