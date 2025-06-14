@@ -40,28 +40,8 @@ jobs:
               src/Utils/KittyAlertView.mm \
               ../deps/SSZipArchive/SSZipArchive.m
 
-          # Use += to append flags and build absolute paths to ensure they are not ignored by Theos.
-          # This is the most robust way to declare compiler flags.
-          ABSOLUTE_DEPS_PATH = $(THEOS_PROJECT_DIR)/../deps
-
-          export COMMON_FLAGS = \
-              -std=c++17 \
-              -Wno-deprecated-declarations \
-              -fobjc-arc-exceptions \
-              -I"$(ABSOLUTE_DEPS_PATH)/KittyMemory/KittyMemory" \
-              -I"$(ABSOLUTE_DEPS_PATH)/fmt" \
-              -I"$(ABSOLUTE_DEPS_PATH)/hash" \
-              -I"$(ABSOLUTE_DEPS_PATH)/nlohmann" \
-              -I"$(ABSOLUTE_DEPS_PATH)/SSZipArchive/minizip" \
-              -I"$(ABSOLUTE_DEPS_PATH)/utfcpp" \
-              -I"$(ABSOLUTE_DEPS_PATH)"
-
-          UEDumper_CXXFLAGS += $(COMMON_FLAGS)
-          UEDumper_OBJCXXFLAGS += $(COMMON_FLAGS)
-          UEDumper_OBJCFLAGS += $(COMMON_FLAGS)
-
           # Add minizip source files to be compiled with the tweak
-          UEDumper_CFLAGS += -I"$(ABSOLUTE_DEPS_PATH)/SSZipArchive/minizip"
+          ABSOLUTE_DEPS_PATH = $(THEOS_PROJECT_DIR)/../deps
           UEDumper_FILES += \
               $(ABSOLUTE_DEPS_PATH)/SSZipArchive/minizip/mz_crypt.c \
               $(ABSOLUTE_DEPS_PATH)/SSZipArchive/minizip/mz_os.c \
@@ -69,9 +49,6 @@ jobs:
               $(ABSOLUTE_DEPS_PATH)/SSZipArchive/minizip/mz_zip.c \
               $(ABSOLUTE_DEPS_PATH)/SSZipArchive/minizip/mz_zip_rw.c \
               $(ABSOLUTE_DEPS_PATH)/SSZipArchive/minizip/mz_compat.c
-          
-          # Linker flags (if needed in the future)
-          UEDumper_LDFLAGS =
 
           include $(THEOS)/makefiles/common.mk
           include $(THEOS)/makefiles/tweak.mk
@@ -94,7 +71,20 @@ jobs:
         id: build
         run: |
           cd Tweak
-          make clean all messages=yes
+
+          # Define all compiler flags in a variable. These will be passed directly to make
+          # to override any internal Theos settings. This is the most reliable method.
+          FLAGS="-std=c++17 -fobjc-arc-exceptions -Wno-deprecated-declarations"
+          FLAGS="$FLAGS -I../deps -I../deps/KittyMemory/KittyMemory -I../deps/fmt"
+          FLAGS="$FLAGS -I../deps/hash -I../deps/nlohmann -I../deps/SSZipArchive/minizip -I../deps/utfcpp"
+
+          # Execute the build, passing the flags on the command line
+          make clean all messages=yes \
+            "UEDumper_CXXFLAGS=$FLAGS" \
+            "UEDumper_OBJCXXFLAGS=$FLAGS" \
+            "UEDumper_CFLAGS=$FLAGS" \
+            "UEDumper_OBJCFLAGS=$FLAGS"
+
           echo "tweak_path=$(ls -t packages/*.deb 2>/dev/null | head -n1)" >> $GITHUB_OUTPUT
 
       - name: Upload Artifact
