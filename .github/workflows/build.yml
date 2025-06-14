@@ -47,12 +47,12 @@ jobs:
             	src/Dumper.cpp \
             	src/UPackageGenerator.cpp \
             	src/UE/UEGameProfile.cpp \
+            	src/UE/UEMemory.cpp \
             	src/UE/UEOffsets.cpp \
             	src/UE/UEWrappers.cpp \
             	src/Utils/AlertUtils.mm \
             	src/Utils/BufferFmt.cpp \
-            	src/Utils/KittyAlertView.mm \
-            	src/Utils/ProgressUtils.cpp
+            	src/Utils/KittyAlertView.mm
 
             DEPS_SRC_FILES = \
             	$(wildcard $(DEPS_PATH)/KittyMemory/*.cpp) \
@@ -98,6 +98,12 @@ jobs:
             # --- Final include ---
             include $(THEOS_MAKE_PATH)/tweak.mk
         run: echo "$MAKEFILE_CONTENT" > Tweak/Makefile
+      
+      - name: Debug File Listing
+        run: |
+          echo "--- Listing all files in Tweak directory ---"
+          find Tweak -print
+          echo "--------------------------------------------"
 
       - name: Build Tweak
         run: |
