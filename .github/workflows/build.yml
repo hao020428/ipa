@@ -137,6 +137,35 @@ jobs:
         # 检查新创建的文件
         echo "Contents of new ProgressUtils.hpp:"
         cat Tweak/src/Utils/ProgressUtils.hpp
+        
+        # 创建必要的Filter.plist文件
+        cat > Tweak/UEDumper.plist << 'EOF'
+        <?xml version="1.0" encoding="UTF-8"?>
+        <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+        <plist version="1.0">
+        <dict>
+            <key>Filter</key>
+            <dict>
+                <key>Bundles</key>
+                <array>
+                    <string>com.apple.UIKit</string>
+                </array>
+                <key>Executables</key>
+                <array>
+                    <string>UE4Game</string>
+                    <string>UEGame</string>
+                </array>
+                <key>Classes</key>
+                <array>
+                    <string>UIApplication</string>
+                </array>
+            </dict>
+        </dict>
+        </plist>
+        EOF
+        
+        echo "Created UEDumper.plist:"
+        cat Tweak/UEDumper.plist
 
     - name: Configure build
       run: |
