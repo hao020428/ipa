@@ -46,7 +46,7 @@ jobs:
               -I../deps/fmt \
               -I../deps/hash \
               -I../deps/nlohmann \
-              -I../deps/SSZipArchive \
+              -I../deps \
               -I../deps/SSZipArchive/minizip \
               -I../deps/utfcpp \
               -std=c++17 \
