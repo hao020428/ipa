@@ -94,6 +94,31 @@ jobs:
             int getPercentage() const {
                 return _lastPercent;
             }
+            
+            // 添加++运算符重载
+            SimpleProgressBar& operator++() {
+                // 前缀++
+                if (_current < _max) {
+                    _current++;
+                    _lastPercent = static_cast<int>((_current * 100.0) / _max);
+                }
+                return *this;
+            }
+            
+            SimpleProgressBar operator++(int) {
+                // 后缀++
+                SimpleProgressBar tmp(*this);
+                if (_current < _max) {
+                    _current++;
+                    _lastPercent = static_cast<int>((_current * 100.0) / _max);
+                }
+                return tmp;
+            }
+            
+            // 可能还需要其他运算符
+            operator int() const {
+                return _current;
+            }
         };
         
         // 使用std::function作为回调类型，以匹配Dumper.hpp中的定义
