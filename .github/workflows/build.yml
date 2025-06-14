@@ -1,0 +1,36 @@
+name: Build iOS_UEDumper
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          submodules: 'recursive'
+
+      - name: Install Dependencies
+        run: |
+          brew install ldid xz
+
+      - name: Install Theos
+        run: |
+          export THEOS=~/theos
+          git clone --recursive https://github.com/theos/theos.git $THEOS
+          
+      - name: Build Tweak
+        run: |
+          export THEOS=~/theos
+          cd Tweak
+          make package THEOS=~/theos
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: iOS_UEDumper-deb
+          path: Tweak/packages/*.deb
