@@ -2,12 +2,8 @@
 
 name: Build iOS_UEDumper Tweak
 
-# 工作流触发条件
 on:
-  # 允许手动从 GitHub Actions 页面触发
   workflow_dispatch:
-
-  # 当有代码推送到 main 分支时自动触发
   push:
     branches:
       - main
@@ -15,7 +11,6 @@ on:
 
 jobs:
   build:
-    # 使用最新的 macOS 环境来运行作业
     runs-on: macos-latest
 
     steps:
@@ -30,8 +25,8 @@ jobs:
         run: |
           brew install ldid xz
 
-      # 步骤 3: 安装 Theos 和 iOS SDK (稳定方法)
-      - name: Install Theos & SDK (Stable Method)
+      # 步骤 3: 安装 Theos 和 iOS SDK (最稳定方法)
+      - name: Install Theos & SDK (Most Stable Method)
         run: |
           # 克隆 Theos
           sudo git clone --recursive https://github.com/theos/theos.git /opt/theos
@@ -39,23 +34,13 @@ jobs:
           # 设置 THEOS 环境变量
           echo "THEOS=/opt/theos" >> $GITHUB_ENV
           
-          # 【修正点】彻底放弃不稳定的 install-sdk 脚本。
-          # 改为从一个可靠的源手动下载一个确认可用的 SDK (iOS 14.5)。
-          # 这将从根本上解决 SDK 版本不存在的问题。
-          SDK_URL="https://github.com/xybp888/iOS-SDKs/releases/download/14.5/iPhoneOS14.5.sdk.tar.xz"
+          # 【修正点】不再使用任何 curl 下载链接。
+          # 直接从 Theos 官方 SDK 仓库用 Git 克隆一个确认可用的 SDK。
+          # 这是最可靠的方法，因为它不依赖于任何可能失效的 HTTP 链接。
+          sudo git clone https://github.com/theos/sdks.git --depth 1 /tmp/sdks
+          sudo mv /tmp/sdks/iPhoneOS15.5.sdk /opt/theos/sdks/
+          sudo rm -rf /tmp/sdks
           
-          # 下载 SDK
-          curl -L "$SDK_URL" -o iPhoneOS.sdk.tar.xz
-          
-          # 为 SDK 创建目录
-          sudo mkdir -p /opt/theos/sdks
-          
-          # 解压 SDK 到 Theos 的目录
-          sudo tar -xf iPhoneOS.sdk.tar.xz -C /opt/theos/sdks/
-          
-          # 清理下载的文件
-          rm iPhoneOS.sdk.tar.xz
-
       # 步骤 4: 编译并打包 Tweak
       - name: Build and Package Tweak
         run: |
