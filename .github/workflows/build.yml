@@ -20,8 +20,8 @@ jobs:
       - name: Debug File System Before Copy
         run: |
           echo "--- Current Working Directory: $(pwd) ---"
-          echo "--- Full recursive file listing before copy ---"
-          ls -laR
+          echo "--- Listing contents of 'deps' directory only ---"
+          ls -laR deps
           echo "------------------------------------------------"
         shell: bash
 
