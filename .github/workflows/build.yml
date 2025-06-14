@@ -50,9 +50,9 @@ jobs:
               $(ABSOLUTE_DEPS_PATH)/SSZipArchive/minizip/mz_zip_rw.c \
               $(ABSOLUTE_DEPS_PATH)/SSZipArchive/minizip/mz_compat.c
 
-          # Use the 'override' directive. This is a GNU Make feature that prevents
-          # the variable from being overridden by Theos's internal Makefiles.
-          # This is our last and most powerful tool.
+          # This is the definitive solution. We take Theos's own flags, append ours,
+          # and then use 'override' to lock them in place, preventing Theos from
+          # resetting them during its internal build process.
           COMMON_FLAGS = \
               -std=c++17 \
               -fobjc-arc-exceptions \
@@ -65,10 +65,10 @@ jobs:
               -I$(ABSOLUTE_DEPS_PATH)/SSZipArchive/minizip \
               -I$(ABSOLUTE_DEPS_PATH)/utfcpp
 
-          override CFLAGS += $(COMMON_FLAGS)
-          override CXXFLAGS += $(COMMON_FLAGS)
-          override OBJCFLAGS += $(COMMON_FLAGS)
-          override OBJCXXFLAGS += $(COMMON_FLAGS)
+          override CXXFLAGS = $(THEOS_CXXFLAGS) $(COMMON_FLAGS)
+          override OBJCXXFLAGS = $(THEOS_OBJCXXFLAGS) $(COMMON_FLAGS)
+          override CFLAGS = $(THEOS_CFLAGS) $(COMMON_FLAGS)
+          override OBJCFLAGS = $(THEOS_OBJCFLAGS) $(COMMON_FLAGS)
 
           include $(THEOS)/makefiles/common.mk
           include $(THEOS)/makefiles/tweak.mk
