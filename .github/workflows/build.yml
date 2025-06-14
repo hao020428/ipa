@@ -20,8 +20,7 @@ jobs:
 
     steps:
       # 步骤 1: 检出代码
-      # 使用 actions/checkout@v4 来获取你的代码
-      # with: submodules: 'recursive' 是关键，它会自动拉取所有子模块依赖
+      # with: submodules: 'recursive' 会自动拉取所有子模块依赖
       - name: Checkout Repository
         uses: actions/checkout@v4
         with:
@@ -34,26 +33,21 @@ jobs:
           brew install ldid xz
 
       # 步骤 3: 安装 Theos 和 iOS SDK
-      # 这会将 Theos 克隆到 /opt/theos，并下载一个可用的 iOS SDK
+      # 这个步骤现在更加健壮
       - name: Install Theos & SDK
         run: |
-          # 克隆 Theos
+          # 克隆 Theos 到一个固定的、有权限的位置
           sudo git clone --recursive https://github.com/theos/theos.git /opt/theos
           
           # 设置 THEOS 环境变量，以便后续步骤使用
           echo "THEOS=/opt/theos" >> $GITHUB_ENV
           
-          # 为 Theos SDK 准备目录
-          sudo mkdir -p /opt/theos/sdks
-          
-          # 下载并解压一个常用的 iOS SDK（例如 iOS 16.4）
-          curl -LO https://github.com/theos/sdks/archive/refs/tags/16.4.zip
-          unzip 16.4.zip
-          sudo mv sdks-16.4/*.sdk /opt/theos/sdks/
-          rm -rf sdks-16.4 16.4.zip
+          # 【修正点】使用 Theos 内置的工具来下载和安装 SDK
+          # 这比手动 curl 和 unzip 可靠得多
+          sudo /opt/theos/bin/install-sdk 16.4
 
       # 步骤 4: 编译并打包 Tweak
-      # 'make package' 会执行清理、编译和打包
+      # -j$(sysctl -n hw.ncpu) 会使用所有可用的 CPU核心来加速编译
       - name: Build and Package Tweak
         run: |
           cd Tweak
