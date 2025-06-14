@@ -38,37 +38,28 @@ jobs:
               src/Utils/AlertUtils.mm \
               src/Utils/BufferFmt.cpp \
               src/Utils/KittyAlertView.mm \
-              ../deps/SSZipArchive/SSZipArchive.m
+              includes/SSZipArchive/SSZipArchive.m
 
           # Add minizip source files to be compiled with the tweak
-          ABSOLUTE_DEPS_PATH = $(THEOS_PROJECT_DIR)/../deps
           UEDumper_FILES += \
-              $(ABSOLUTE_DEPS_PATH)/SSZipArchive/minizip/mz_crypt.c \
-              $(ABSOLUTE_DEPS_PATH)/SSZipArchive/minizip/mz_os.c \
-              $(ABSOLUTE_DEPS_PATH)/SSZipArchive/minizip/mz_strm.c \
-              $(ABSOLUTE_DEPS_PATH)/SSZipArchive/minizip/mz_zip.c \
-              $(ABSOLUTE_DEPS_PATH)/SSZipArchive/minizip/mz_zip_rw.c \
-              $(ABSOLUTE_DEPS_PATH)/SSZipArchive/minizip/mz_compat.c
+              includes/SSZipArchive/minizip/mz_crypt.c \
+              includes/SSZipArchive/minizip/mz_os.c \
+              includes/SSZipArchive/minizip/mz_strm.c \
+              includes/SSZipArchive/minizip/mz_zip.c \
+              includes/SSZipArchive/minizip/mz_zip_rw.c \
+              includes/SSZipArchive/minizip/mz_compat.c
 
-          # This is the definitive solution. We take Theos's own flags, append ours,
-          # and then use 'override' to lock them in place, preventing Theos from
-          # resetting them during its internal build process.
-          COMMON_FLAGS = \
+          # This is the definitive solution. We provide a simple, local include
+          # path that Theos cannot ignore.
+          override CXXFLAGS += \
               -std=c++17 \
               -fobjc-arc-exceptions \
               -Wno-deprecated-declarations \
-              -I$(ABSOLUTE_DEPS_PATH) \
-              -I$(ABSOLUTE_DEPS_PATH)/KittyMemory/KittyMemory \
-              -I$(ABSOLUTE_DEPS_PATH)/fmt \
-              -I$(ABSOLUTE_DEPS_PATH)/hash \
-              -I$(ABSOLUTE_DEPS_PATH)/nlohmann \
-              -I$(ABSOLUTE_DEPS_PATH)/SSZipArchive/minizip \
-              -I$(ABSOLUTE_DEPS_PATH)/utfcpp
+              -Iincludes
 
-          override CXXFLAGS = $(THEOS_CXXFLAGS) $(COMMON_FLAGS)
-          override OBJCXXFLAGS = $(THEOS_OBJCXXFLAGS) $(COMMON_FLAGS)
-          override CFLAGS = $(THEOS_CFLAGS) $(COMMON_FLAGS)
-          override OBJCFLAGS = $(THEOS_OBJCFLAGS) $(COMMON_FLAGS)
+          override OBJCXXFLAGS += $(CXXFLAGS)
+          override CFLAGS += $(CXXFLAGS)
+          override OBJCFLAGS += $(CXXFLAGS)
 
           include $(THEOS)/makefiles/common.mk
           include $(THEOS)/makefiles/tweak.mk
@@ -76,6 +67,20 @@ jobs:
           after-install::
           	install.exec "sbreload"
           EOF
+        shell: bash
+
+      - name: Prepare Build Environment by Copying Dependencies
+        run: |
+          echo "Copying all dependencies into a local 'includes' directory to bypass Theos path issues..."
+          mkdir -p Tweak/includes
+          # Copy all dependency headers into the local includes directory
+          cp -R deps/KittyMemory/KittyMemory/* Tweak/includes/
+          cp -R deps/fmt Tweak/includes/
+          cp -R deps/hash Tweak/includes/
+          cp -R deps/nlohmann Tweak/includes/
+          cp -R deps/SSZipArchive Tweak/includes/
+          cp -R deps/utfcpp Tweak/includes/
+          echo "Done copying dependencies."
         shell: bash
 
       - name: Build Tweak
