@@ -27,34 +27,35 @@ jobs:
           submodules: 'recursive'
 
       # 步骤 2: 安装 Theos 依赖
-      # Theos 构建需要 ldid 和 xz
       - name: Install Dependencies
         run: |
           brew install ldid xz
 
       # 步骤 3: 安装 Theos 和 iOS SDK
-      # 这个步骤现在更加健壮
       - name: Install Theos & SDK
+        # 【修正点】为这个步骤设置 GITHUB_TOKEN 环境变量
+        # secrets.GITHUB_TOKEN 由 GitHub Actions 自动提供
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # 克隆 Theos 到一个固定的、有权限的位置
+          # 克隆 Theos
           sudo git clone --recursive https://github.com/theos/theos.git /opt/theos
           
-          # 设置 THEOS 环境变量，以便后续步骤使用
+          # 设置 THEOS 环境变量，供后续步骤使用
           echo "THEOS=/opt/theos" >> $GITHUB_ENV
           
-          # 【修正点】使用 Theos 内置的工具来下载和安装 SDK
-          # 这比手动 curl 和 unzip 可靠得多
-          sudo /opt/theos/bin/install-sdk 16.4
+          # 【修正点】使用 `sudo -E` 来执行 install-sdk。
+          # '-E' 选项会保留当前的环境变量（特别是 GITHUB_TOKEN），
+          # 这样脚本就能使用令牌进行 API 请求，从而避免速率限制。
+          sudo -E /opt/theos/bin/install-sdk 16.4
 
       # 步骤 4: 编译并打包 Tweak
-      # -j$(sysctl -n hw.ncpu) 会使用所有可用的 CPU核心来加速编译
       - name: Build and Package Tweak
         run: |
           cd Tweak
           make package -j$(sysctl -n hw.ncpu)
           
       # 步骤 5: 上传构建产物
-      # 将生成的 .deb 文件作为可下载的产物上传
       - name: Upload .deb Artifact
         uses: actions/upload-artifact@v4
         with:
