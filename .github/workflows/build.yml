@@ -28,42 +28,68 @@ jobs:
           rm -rf deps/KittyMemory
           git clone https://github.com/MJx0/KittyMemory.git deps/KittyMemory
       
-      - name: Force Overwrite Makefile with Sledgehammer Version
+      - name: Force Overwrite Makefile with The Correct Version
         env:
           MAKEFILE_CONTENT: |
             TARGET := iphone:clang:latest:14.0
             ARCHS = arm64 arm64e
             THEOS_PACKAGE_SCHEME = rootless
-            
+
             include $(THEOS)/makefiles/common.mk
 
             TWEAK_NAME = UEDumper
 
             # --- Source Files ---
             DEPS_PATH = ../deps
-            TWEAK_SRC_FILES = $(wildcard src/*.mm) $(wildcard src/*.cpp) $(wildcard src/UE/*.cpp) $(wildcard src/Utils/*.cpp) $(wildcard src/Utils/*.mm)
-            DEPS_SRC_FILES = $(wildcard $(DEPS_PATH)/KittyMemory/*.cpp) $(DEPS_PATH)/fmt/format.cc $(DEPS_PATH)/SSZipArchive/SSZipArchive.m $(wildcard $(DEPS_PATH)/SSZipArchive/minizip/*.c)
+            
+            TWEAK_SRC_FILES = \
+            	src/Tweak.mm \
+            	src/Dumper.cpp \
+            	src/UPackageGenerator.cpp \
+            	src/UE/UEGameProfile.cpp \
+            	src/UE/UEOffsets.cpp \
+            	src/UE/UEWrappers.cpp \
+            	src/Utils/AlertUtils.mm \
+            	src/Utils/BufferFmt.cpp \
+            	src/Utils/KittyAlertView.mm \
+            	src/Utils/ProgressUtils.cpp
+
+            DEPS_SRC_FILES = \
+            	$(wildcard $(DEPS_PATH)/KittyMemory/*.cpp) \
+            	$(DEPS_PATH)/fmt/format.cc \
+            	$(DEPS_PATH)/SSZipArchive/SSZipArchive.m \
+            	$(wildcard $(DEPS_PATH)/SSZipArchive/minizip/*.c)
+
             $(TWEAK_NAME)_FILES = $(TWEAK_SRC_FILES) $(DEPS_SRC_FILES)
 
-            # --- Sledgehammer Flags ---
-            # Apply ALL necessary flags to ALL compilers to be absolutely sure.
-            # Clang should ignore irrelevant flags (e.g., -std=c++17 for .c files).
-            SLEDGEHAMMER_FLAGS = \
-            	-std=c++17 \
-            	-fobjc-arc \
+            # --- Compiler Flags ---
+            # Explicitly add every conceivable include path.
+            ALL_INCLUDES = \
+            	-I. \
+            	-Isrc \
             	-I$(DEPS_PATH) \
             	-I$(DEPS_PATH)/KittyMemory \
+            	-I$(DEPS_PATH)/fmt \
+            	-I$(DEPS_PATH)/hash \
+            	-I$(DEPS_PATH)/nlohmann \
             	-I$(DEPS_PATH)/SSZipArchive \
-            	-Wno-deprecated-declarations \
-            	-Wno-unused-function \
-            	-Wno-c++11-extensions \
-            	-Wno-c++11-inline-namespace \
-            	-DHAVE_INTTYPES_H -DHAVE_PKCRYPT -DHAVE_STDINT_H -DHAVE_WZAES -DHAVE_ZLIB
+            	-I$(DEPS_PATH)/SSZipArchive/minizip \
+            	-I$(DEPS_PATH)/utfcpp
 
-            $(TWEAK_NAME)_CFLAGS = $(SLEDGEHAMMER_FLAGS)
-            $(TWEAK_NAME)_CXXFLAGS = $(SLEDGEHAMMER_FLAGS)
-            $(TWEAK_NAME)_OBJCFLAGS = $(SLEDGEHAMMER_FLAGS)
-            $(TWEAK_NAME)_OBJCXXFLAGS = $(SLEDGEHAMMER_FLAGS)
+            # Common flags for all file types
+            COMMON_FLAGS = -fobjc-arc -Wno-deprecated-declarations -Wno-unused-function
+
+            # C++-specific flags
+            CPP_FLAGS = -std=c++17 -Wno-c++11-extensions -Wno-c++11-inline-namespace
+            
+            # C-specific flags
+            C_FLAGS = -DHAVE_INTTYPES_H -DHAVE_PKCRYPT -DHAVE_STDINT_H -DHAVE_WZAES -DHAVE_ZLIB
+            
+            # Combine and assign to Theos variables
+            $(TWEAK_NAME)_CXXFLAGS = $(COMMON_FLAGS) $(CPP_FLAGS) $(ALL_INCLUDES)
+            $(TWEAK_NAME)_OBJCXXFLAGS = $(COMMON_FLAGS) $(CPP_FLAGS) $(ALL_INCLUDES)
+            $(TWEAK_NAME)_CFLAGS = $(COMMON_FLAGS) $(C_FLAGS) $(ALL_INCLUDES)
+            $(TWEAK_NAME)_OBJCFLAGS = $(COMMON_FLAGS) $(C_FLAGS) $(ALL_INCLUDES)
 
             # --- Linker Flags ---
             $(TWEAK_NAME)_LDFLAGS = -lz -liconv -ldl
