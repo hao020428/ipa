@@ -18,18 +18,19 @@ jobs:
         run: |
           brew install ldid xz
 
-      - name: Clone KittyMemory dependency
-        run: git clone https://github.com/mjx0/KittyMemory.git deps/KittyMemory
-
       - name: Install Theos
         run: |
           export THEOS=~/theos
           git clone --recursive https://github.com/theos/theos.git $THEOS
-          
+
       - name: Download Dependencies
         run: |
           rm -rf deps/KittyMemory
           git clone https://github.com/MJx0/KittyMemory.git deps/KittyMemory
+
+      - name: Patch Makefile
+        run: |
+          sed -i '' 's|../deps/KittyMemory/KittyMemory|../deps/KittyMemory|g' Tweak/Makefile
           
       - name: Build Tweak
         run: |
@@ -41,4 +42,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: iOS_UEDumper-deb
-          path: Tweak/packages/*.deb 
+          path: Tweak/packages/*.deb
