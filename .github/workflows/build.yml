@@ -12,9 +12,38 @@ jobs:
     runs-on: macos-latest  # 使用macOS运行器，因为这是iOS项目
     
     steps:
-    - uses: actions/checkout@v4
+    - name: Checkout code
+      uses: actions/checkout@v4
       with:
-        submodules: 'recursive'  # 确保获取所有子模块
+        submodules: true  # 确保获取所有子模块
+        fetch-depth: 0    # 获取完整历史
+    
+    - name: Ensure submodules are initialized
+      run: |
+        git submodule update --init --recursive
+        # 检查KittyMemory是否已正确克隆
+        if [ ! -f "iOS_UEDumper-main/deps/KittyMemory/KittyInclude.hpp" ] && [ -d "iOS_UEDumper-main" ]; then
+          echo "KittyMemory not properly cloned, manually cloning it"
+          rm -rf iOS_UEDumper-main/deps/KittyMemory
+          git clone https://github.com/MJx0/KittyMemory.git iOS_UEDumper-main/deps/KittyMemory
+        fi
+        if [ ! -f "deps/KittyMemory/KittyInclude.hpp" ] && [ -d "deps" ]; then
+          echo "KittyMemory not properly cloned at root level, manually cloning it"
+          rm -rf deps/KittyMemory
+          git clone https://github.com/MJx0/KittyMemory.git deps/KittyMemory
+        fi
+        
+        # 确保所有可能的路径都有KittyMemory
+        for dir in $(find . -type d -name "deps" 2>/dev/null); do
+          if [ ! -d "$dir/KittyMemory" ] || [ ! -f "$dir/KittyMemory/KittyInclude.hpp" ]; then
+            echo "Adding KittyMemory to $dir"
+            rm -rf "$dir/KittyMemory"
+            git clone https://github.com/MJx0/KittyMemory.git "$dir/KittyMemory"
+          fi
+        done
+        
+        # 列出所有KittyMemory目录内容
+        find . -name "KittyMemory" -type d | xargs -I{} sh -c 'echo "Content of {}:"; ls -la {}'
     
     - name: Set up Xcode
       uses: maxim-lobanov/setup-xcode@v1
@@ -55,6 +84,12 @@ jobs:
         # 查找所有Tweak目录
         find . -type d -name "Tweak" | xargs -I{} echo "Found Tweak directory: {}"
     
+    - name: Check include paths
+      run: |
+        # 查找项目中的include路径设置
+        find . -name "Makefile" -exec grep -l "INCLUDES" {} \;
+        find . -name "Makefile" -type f | xargs cat
+    
     - name: Build project
       run: |
         # 动态查找Tweak目录
@@ -64,7 +99,29 @@ jobs:
           exit 1
         fi
         echo "Found Tweak directory at: $TWEAK_DIR"
+        
+        # 创建临时Makefile确保包含KittyMemory路径
+        KITTY_PATHS=$(find . -name "KittyMemory" -type d)
+        if [ -n "$KITTY_PATHS" ]; then
+          KITTY_PATH=$(echo "$KITTY_PATHS" | head -n 1)
+          echo "Found KittyMemory at: $KITTY_PATH"
+          
+          # 备份原始Makefile
+          if [ -f "$TWEAK_DIR/Makefile" ]; then
+            cp "$TWEAK_DIR/Makefile" "$TWEAK_DIR/Makefile.bak"
+            
+            # 添加KittyMemory到include路径
+            echo "" >> "$TWEAK_DIR/Makefile"
+            echo "# Added by GitHub Actions" >> "$TWEAK_DIR/Makefile"
+            echo "UEDumper_CFLAGS += -I$KITTY_PATH" >> "$TWEAK_DIR/Makefile"
+            echo "UEDumper_CFLAGS += -I$(dirname $KITTY_PATH)" >> "$TWEAK_DIR/Makefile"
+            
+            cat "$TWEAK_DIR/Makefile"
+          fi
+        fi
+        
         cd "$TWEAK_DIR"
+        make clean
         make package
     
     - name: Archive production artifacts
