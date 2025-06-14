@@ -198,6 +198,27 @@ jobs:
           echo "Build failed"
           exit 1
         }
+        
+        # 检查是否有deb文件生成及其位置
+        echo "Looking for deb files..."
+        find $(pwd) -name "*.deb" || echo "No .deb files found directly"
+        find $(pwd)/.. -name "*.deb" || echo "No .deb files found one level up"
+        
+        # 创建输出目录
+        mkdir -p packages
+        # 尝试找到并复制deb文件到已知位置
+        if [ -d ".theos/obj/debug/deb" ]; then
+          cp .theos/obj/debug/deb/*.deb packages/ || echo "No debug debs found"
+        fi
+        if [ -d ".theos/obj/deb" ]; then
+          cp .theos/obj/deb/*.deb packages/ || echo "No release debs found"
+        fi
+        
+        # 如果找到deb文件，列出它们
+        if [ -d "packages" ]; then
+          echo "Contents of packages directory:"
+          ls -la packages/
+        fi
     
     - name: Archive production artifacts
       if: success()
@@ -205,8 +226,11 @@ jobs:
       with:
         name: UEDumper-package
         path: |
-          **/packages/*.deb
           Tweak/packages/*.deb
+          Tweak/.theos/obj/debug/deb/*.deb
+          Tweak/.theos/obj/deb/*.deb
+          **/UEDumper*.deb
+        if-no-files-found: warn
     
     - name: Create Release
       if: startsWith(github.ref, 'refs/tags/')
