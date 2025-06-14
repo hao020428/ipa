@@ -31,6 +31,12 @@ jobs:
       - name: Patch Makefile
         run: |
           sed -i '' 's|../deps/KittyMemory/KittyMemory|../deps/KittyMemory|g' Tweak/Makefile
+      
+      - name: Verify Makefile Patch
+        run: |
+          echo "--- Contents of Tweak/Makefile after patching ---"
+          cat Tweak/Makefile
+          echo "-------------------------------------------------"
           
       - name: Build Tweak
         run: |
