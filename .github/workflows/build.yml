@@ -41,12 +41,13 @@ jobs:
               ../deps/SSZipArchive/SSZipArchive.m
 
           # Add all required include paths and compiler flags for C++
+          # Note: We use -I../deps because Tweak.mm uses #import <SSZipArchive/ZipArchive.h>
           UEDumper_CXXFLAGS = \
+              -I../deps \
               -I../deps/KittyMemory/KittyMemory \
               -I../deps/fmt \
               -I../deps/hash \
               -I../deps/nlohmann \
-              -I../deps \
               -I../deps/SSZipArchive/minizip \
               -I../deps/utfcpp \
               -std=c++17 \
@@ -76,6 +77,15 @@ jobs:
           after-install::
           	install.exec "sbreload"
           EOF
+        shell: bash
+
+      - name: Debug Build Environment
+        run: |
+          echo "--- Final Tweak/Makefile content ---"
+          cat Tweak/Makefile
+          echo "--- Recursive file list from Tweak/ directory ---"
+          ls -laR Tweak/
+          echo "------------------------------------------------"
         shell: bash
 
       - name: Build Tweak
