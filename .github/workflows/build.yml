@@ -15,7 +15,7 @@ jobs:
           submodules: 'recursive'
 
       - name: Setup Theos
-        uses: themuslcle/theos-action@v1
+        uses: kabiroberai/theos-action@v1
         with:
           theos_version: '5.1.1'
 
