@@ -1,55 +1,69 @@
-# .github/workflows/build.yml
-
-name: Build iOS_UEDumper Tweak
+name: Build iOS UEDumper
 
 on:
-  workflow_dispatch:
   push:
-    branches:
-      - main
-      - master
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:  # 允许手动触发工作流
 
 jobs:
   build:
-    runs-on: macos-latest
-
+    runs-on: macos-latest  # 使用macOS运行器，因为这是iOS项目
+    
     steps:
-      # 步骤 1: 检出代码
-      - name: Checkout Repository
-        uses: actions/checkout@v4
-        with:
-          submodules: 'recursive'
-
-      # 步骤 2: 安装 Theos 依赖
-      - name: Install Dependencies
-        run: |
-          brew install ldid xz
-
-      # 步骤 3: 安装 Theos 和 iOS SDK (最稳定方法)
-      - name: Install Theos & SDK (Most Stable Method)
-        run: |
-          # 克隆 Theos
-          sudo git clone --recursive https://github.com/theos/theos.git /opt/theos
-          
-          # 设置 THEOS 环境变量
-          echo "THEOS=/opt/theos" >> $GITHUB_ENV
-          
-          # 【修正点】不再使用任何 curl 下载链接。
-          # 直接从 Theos 官方 SDK 仓库用 Git 克隆一个确认可用的 SDK。
-          # 这是最可靠的方法，因为它不依赖于任何可能失效的 HTTP 链接。
-          sudo git clone https://github.com/theos/sdks.git --depth 1 /tmp/sdks
-          sudo mv /tmp/sdks/iPhoneOS15.5.sdk /opt/theos/sdks/
-          sudo rm -rf /tmp/sdks
-          
-      # 步骤 4: 编译并打包 Tweak
-      - name: Build and Package Tweak
-        run: |
-          cd Tweak
-          make package -j$(sysctl -n hw.ncpu)
-          
-      # 步骤 5: 上传构建产物
-      - name: Upload .deb Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: iOS_UEDumper-deb
-          path: Tweak/packages/*.deb
+    - uses: actions/checkout@v2
+      with:
+        submodules: 'recursive'  # 确保获取所有子模块
+    
+    - name: Set up Xcode
+      uses: maxim-lobanov/setup-xcode@v1
+      with:
+        xcode-version: '13.2'  # 选择一个适合项目的Xcode版本
+    
+    - name: Install dependencies
+      run: |
+        brew install ldid  # 用于签名iOS二进制文件
+        brew install theos/tap/theos  # 安装Theos (用于越狱iOS开发)
+    
+    - name: Set up Theos environment
+      run: |
+        export THEOS=$(brew --prefix theos)
+        echo "THEOS=$THEOS" >> $GITHUB_ENV
+        echo "THEOS_DEVICE_IP=127.0.0.1" >> $GITHUB_ENV
+        echo "THEOS_DEVICE_PORT=2222" >> $GITHUB_ENV
+    
+    - name: Build project
+      run: |
+        cd iOS_UEDumper-main/Tweak
+        make package
+    
+    - name: Archive production artifacts
+      uses: actions/upload-artifact@v2
+      with:
+        name: UEDumper-package
+        path: |
+          iOS_UEDumper-main/Tweak/packages/*.deb
+    
+    - name: Create Release
+      if: startsWith(github.ref, 'refs/tags/')
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ github.ref }}
+        release_name: Release ${{ github.ref }}
+        draft: false
+        prerelease: false
+    
+    - name: Upload Release Asset
+      if: startsWith(github.ref, 'refs/tags/')
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./iOS_UEDumper-main/Tweak/packages/com.yourcompany.uedumper_1.0_iphoneos-arm.deb
+        asset_name: UEDumper.deb
+        asset_content_type: application/vnd.debian.binary-package
