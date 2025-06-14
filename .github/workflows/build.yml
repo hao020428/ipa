@@ -44,7 +44,7 @@ jobs:
           # This is the most robust way to declare compiler flags.
           ABSOLUTE_DEPS_PATH = $(THEOS_PROJECT_DIR)/../deps
 
-          COMMON_FLAGS = \
+          export COMMON_FLAGS = \
               -std=c++17 \
               -Wno-deprecated-declarations \
               -fobjc-arc-exceptions \
@@ -94,7 +94,7 @@ jobs:
         id: build
         run: |
           cd Tweak
-          make all messages=yes
+          make clean all messages=yes
           echo "tweak_path=$(ls -t packages/*.deb 2>/dev/null | head -n1)" >> $GITHUB_OUTPUT
 
       - name: Upload Artifact
