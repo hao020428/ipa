@@ -62,110 +62,20 @@ jobs:
         echo "Directory structure:"
         find . -type d -maxdepth 3 | sort
         
-        # 检查原始包含关系
-        if [ -f "Tweak/src/Dumper.hpp" ]; then
-          echo "Original ProgressCallback definition in Dumper.hpp:"
-          grep -A 2 "ProgressCallback" Tweak/src/Dumper.hpp
-        fi
+        # 检查原始项目结构和文件内容
+        find Tweak -name "*.hpp" | grep Progress || echo "No Progress header files found"
         
-        # 创建一个与实际需求匹配的ProgressUtils.hpp文件
+        # 确保src/Utils目录存在
         mkdir -p Tweak/src/Utils
         
-        # 写入正确的ProgressUtils实现
-        cat > Tweak/src/Utils/ProgressUtils.hpp << 'EOF'
-        #pragma once
-        #include <iostream>
-        #include <functional>
-
-        class SimpleProgressBar {
-        private:
-            int _max;
-            int _current;
-            int _lastPercent;
-        
-        public:
-            SimpleProgressBar(int max) : _max(max), _current(0), _lastPercent(0) {}
-            
-            void update(int val) {
-                _current = val;
-                _lastPercent = static_cast<int>((_current * 100.0) / _max);
-            }
-            
-            int getPercentage() const {
-                return _lastPercent;
-            }
-            
-            // 添加++运算符重载
-            SimpleProgressBar& operator++() {
-                // 前缀++
-                if (_current < _max) {
-                    _current++;
-                    _lastPercent = static_cast<int>((_current * 100.0) / _max);
-                }
-                return *this;
-            }
-            
-            SimpleProgressBar operator++(int) {
-                // 后缀++
-                SimpleProgressBar tmp(*this);
-                if (_current < _max) {
-                    _current++;
-                    _lastPercent = static_cast<int>((_current * 100.0) / _max);
-                }
-                return tmp;
-            }
-            
-            // 可能还需要其他运算符
-            operator int() const {
-                return _current;
-            }
-        };
-        
-        // 使用std::function作为回调类型，以匹配Dumper.hpp中的定义
-        using ProgressCallback = std::function<void(const SimpleProgressBar&)>;
-        EOF
-        
-        # 修复符号链接
+        # 创建符号链接而不是替换现有文件
         cd Tweak
         rm -f Utils
         ln -sf src/Utils Utils
         cd ..
         
-        echo "Updated directory structure:"
+        echo "Project structure after preparation:"
         find Tweak -type f | sort
-        
-        # 检查新创建的文件
-        echo "Contents of new ProgressUtils.hpp:"
-        cat Tweak/src/Utils/ProgressUtils.hpp
-        
-        # 创建必要的Filter.plist文件
-        cat > Tweak/UEDumper.plist << 'EOF'
-        <?xml version="1.0" encoding="UTF-8"?>
-        <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-        <plist version="1.0">
-        <dict>
-            <key>Filter</key>
-            <dict>
-                <key>Bundles</key>
-                <array>
-                    <string>com.apple.UIKit</string>
-                </array>
-                <key>Executables</key>
-                <array>
-                    <string>UE4Game</string>
-                    <string>UEGame</string>
-                </array>
-                <key>Classes</key>
-                <array>
-                    <string>UIApplication</string>
-                </array>
-            </dict>
-        </dict>
-        </plist>
-        EOF
-        
-        echo "Created UEDumper.plist:"
-        cat Tweak/UEDumper.plist
 
     - name: Configure build
       run: |
@@ -179,6 +89,15 @@ jobs:
           cat Tweak/Makefile
         fi
 
+        # 检查现有的ProgressUtils.hpp内容
+        if [ -f "Tweak/src/Utils/ProgressUtils.hpp" ]; then
+          echo "Original ProgressUtils.hpp content:"
+          cat Tweak/src/Utils/ProgressUtils.hpp | grep -A 2 "class SimpleProgressBar"
+          cat Tweak/src/Utils/ProgressUtils.hpp | grep -A 2 "getPercentage"
+        else
+          echo "Warning: ProgressUtils.hpp not found in expected location"
+        fi
+
     - name: Build project
       run: |
         cd Tweak
@@ -190,11 +109,10 @@ jobs:
         
         # 尝试构建
         make package || {
-          echo "First build attempt failed, checking for more errors"
-          # 检查汇编错误
-          find . -name "*.s" -exec cat {} \; 2>/dev/null || echo "No assembly files found"
+          echo "Build attempt failed, checking for errors"
           # 检查前置文件
           find . -name "*.i" -exec cat {} \; 2>/dev/null | grep -A 5 -B 5 "ProgressUtils" || echo "No preprocessed files with ProgressUtils found"
+          # 检查任何编译错误
           echo "Build failed"
           exit 1
         }
@@ -220,6 +138,42 @@ jobs:
           ls -la packages/
         fi
     
+    - name: Create UEDumper.plist if needed
+      run: |
+        # 检查是否存在Filter.plist文件，如果不存在则创建一个
+        if [ ! -f "Tweak/UEDumper.plist" ] && [ ! -f "Tweak/Filter.plist" ]; then
+          echo "Creating UEDumper.plist file..."
+          cat > Tweak/UEDumper.plist << 'EOF'
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+              <key>Filter</key>
+              <dict>
+                  <key>Bundles</key>
+                  <array>
+                      <string>com.apple.UIKit</string>
+                  </array>
+                  <key>Executables</key>
+                  <array>
+                      <string>UE4Game</string>
+                      <string>UEGame</string>
+                  </array>
+                  <key>Classes</key>
+                  <array>
+                      <string>UIApplication</string>
+                  </array>
+              </dict>
+          </dict>
+          </plist>
+          EOF
+          
+          echo "Created UEDumper.plist:"
+          cat Tweak/UEDumper.plist
+        else
+          echo "Filter plist file already exists"
+        fi
+
     - name: Archive production artifacts
       if: success()
       uses: actions/upload-artifact@v4
@@ -238,7 +192,7 @@ jobs:
       uses: softprops/action-gh-release@v2
       with:
         files: |
-          **/packages/*.deb
+          **/UEDumper*.deb
         name: Release ${{ github.ref_name }}
         draft: false
         prerelease: false 
