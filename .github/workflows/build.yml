@@ -20,7 +20,6 @@ jobs:
 
     steps:
       # 步骤 1: 检出代码
-      # with: submodules: 'recursive' 会自动拉取所有子模块依赖
       - name: Checkout Repository
         uses: actions/checkout@v4
         with:
@@ -33,21 +32,17 @@ jobs:
 
       # 步骤 3: 安装 Theos 和 iOS SDK
       - name: Install Theos & SDK
-        # 【修正点】为这个步骤设置 GITHUB_TOKEN 环境变量
-        # secrets.GITHUB_TOKEN 由 GitHub Actions 自动提供
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           # 克隆 Theos
           sudo git clone --recursive https://github.com/theos/theos.git /opt/theos
           
-          # 设置 THEOS 环境变量，供后续步骤使用
+          # 设置 THEOS 环境变量
           echo "THEOS=/opt/theos" >> $GITHUB_ENV
           
-          # 【修正点】使用 `sudo -E` 来执行 install-sdk。
-          # '-E' 选项会保留当前的环境变量（特别是 GITHUB_TOKEN），
-          # 这样脚本就能使用令牌进行 API 请求，从而避免速率限制。
-          sudo -E /opt/theos/bin/install-sdk 16.4
+          # 【修正点】使用一个 Theos 官方确认存在的 SDK 版本 16.2
+          sudo -E /opt/theos/bin/install-sdk 16.2
 
       # 步骤 4: 编译并打包 Tweak
       - name: Build and Package Tweak
