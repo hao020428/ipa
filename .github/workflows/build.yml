@@ -1,108 +1,68 @@
-name: Build Tweak
+# .github/workflows/build.yml
 
+name: Build iOS_UEDumper Tweak
+
+# 工作流触发条件
 on:
-  push:
-    branches: [ main ]
+  # 允许手动从 GitHub Actions 页面触发
   workflow_dispatch:
+
+  # 当有代码推送到 main 分支时自动触发
+  push:
+    branches:
+      - main
+      - master
 
 jobs:
   build:
-    runs-on: macos-14
+    # 使用最新的 macOS 环境来运行作业
+    runs-on: macos-latest
+
     steps:
-      - name: Checkout main repository
+      # 步骤 1: 检出代码
+      # 使用 actions/checkout@v4 来获取你的代码
+      # with: submodules: 'recursive' 是关键，它会自动拉取所有子模块依赖
+      - name: Checkout Repository
         uses: actions/checkout@v4
         with:
           submodules: 'recursive'
 
-      - name: Setup Theos
-        uses: Randomblock1/theos-action@v1
-
-      - name: Prepare Build Environment by Cloning Missing Deps
+      # 步骤 2: 安装 Theos 依赖
+      # Theos 构建需要 ldid 和 xz
+      - name: Install Dependencies
         run: |
-          # The submodule checkout is unreliable, so we clone it manually.
-          git clone https://github.com/MJNONCS/KittyMemory.git deps/KittyMemory/
-          echo "Copying all dependencies into a local 'includes' directory to bypass Theos path issues..."
-          mkdir -p Tweak/includes
-          # Copy all dependency headers into the local includes directory
-          cp -R deps/KittyMemory/KittyMemory/* Tweak/includes/
-          cp -R deps/fmt Tweak/includes/
-          cp -R deps/hash Tweak/includes/
-          cp -R deps/nlohmann Tweak/includes/
-          cp -R deps/SSZipArchive Tweak/includes/
-          cp -R deps/utfcpp Tweak/includes/
-          echo "Done copying dependencies."
-        shell: bash
+          brew install ldid xz
 
-      - name: Debug File System Before Copy
+      # 步骤 3: 安装 Theos 和 iOS SDK
+      # 这会将 Theos 克隆到 /opt/theos，并下载一个可用的 iOS SDK
+      - name: Install Theos & SDK
         run: |
-          echo "--- Current Working Directory: $(pwd) ---"
-          echo "--- Listing contents of 'deps' directory only ---"
-          ls -laR deps
-          echo "------------------------------------------------"
-        shell: bash
+          # 克隆 Theos
+          sudo git clone --recursive https://github.com/theos/theos.git /opt/theos
+          
+          # 设置 THEOS 环境变量，以便后续步骤使用
+          echo "THEOS=/opt/theos" >> $GITHUB_ENV
+          
+          # 为 Theos SDK 准备目录
+          sudo mkdir -p /opt/theos/sdks
+          
+          # 下载并解压一个常用的 iOS SDK（例如 iOS 16.4）
+          curl -LO https://github.com/theos/sdks/archive/refs/tags/16.4.zip
+          unzip 16.4.zip
+          sudo mv sdks-16.4/*.sdk /opt/theos/sdks/
+          rm -rf sdks-16.4 16.4.zip
 
-      - name: Create Correct Makefile
-        run: |
-          cat > Tweak/Makefile << 'EOF'
-          TARGET := iphone:clang:17.5:11.2
-          ARCHS = arm64 arm64e
-          THEOS_PACKAGE_SCHEME = rootless
-
-          TWEAK_NAME = UEDumper
-
-          # List ALL source files explicitly to avoid wildcard issues
-          UEDumper_FILES = \
-              src/Tweak.mm \
-              src/Dumper.cpp \
-              src/UPackageGenerator.cpp \
-              src/UE/UEGameProfile.cpp \
-              src/UE/UEMemory.cpp \
-              src/UE/UEOffsets.cpp \
-              src/UE/UEWrappers.cpp \
-              src/Utils/AlertUtils.mm \
-              src/Utils/BufferFmt.cpp \
-              src/Utils/KittyAlertView.mm \
-              includes/SSZipArchive/SSZipArchive.m
-
-          # Add minizip source files to be compiled with the tweak
-          UEDumper_FILES += \
-              includes/SSZipArchive/minizip/mz_crypt.c \
-              includes/SSZipArchive/minizip/mz_os.c \
-              includes/SSZipArchive/minizip/mz_strm.c \
-              includes/SSZipArchive/minizip/mz_zip.c \
-              includes/SSZipArchive/minizip/mz_zip_rw.c \
-              includes/SSZipArchive/minizip/mz_compat.c
-
-          # This is the definitive solution. We provide a simple, local include
-          # path that Theos cannot ignore.
-          override CXXFLAGS += \
-              -std=c++17 \
-              -fobjc-arc-exceptions \
-              -Wno-deprecated-declarations \
-              -Iincludes
-
-          override OBJCXXFLAGS += $(CXXFLAGS)
-          override CFLAGS += $(CXXFLAGS)
-          override OBJCFLAGS += $(CXXFLAGS)
-
-          include $(THEOS)/makefiles/common.mk
-          include $(THEOS)/makefiles/tweak.mk
-
-          after-install::
-          	install.exec "sbreload"
-          EOF
-        shell: bash
-
-      - name: Build Tweak
-        id: build
+      # 步骤 4: 编译并打包 Tweak
+      # 'make package' 会执行清理、编译和打包
+      - name: Build and Package Tweak
         run: |
           cd Tweak
-          make clean all messages=yes
-          echo "tweak_path=$(ls -t packages/*.deb 2>/dev/null | head -n1)" >> $GITHUB_OUTPUT
-
-      - name: Upload Artifact
-        if: steps.build.outputs.tweak_path
+          make package -j$(sysctl -n hw.ncpu)
+          
+      # 步骤 5: 上传构建产物
+      # 将生成的 .deb 文件作为可下载的产物上传
+      - name: Upload .deb Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: UEDumper-Debian-Package
-          path: Tweak/${{ steps.build.outputs.tweak_path }} 
+          name: iOS_UEDumper-deb
+          path: Tweak/packages/*.deb
