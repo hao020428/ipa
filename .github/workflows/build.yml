@@ -1,3 +1,4 @@
+name: Build iOS_UEDumper
 
 on:
   push:
@@ -27,6 +28,7 @@ jobs:
           
       - name: Download Dependencies
         run: |
+          rm -rf deps/KittyMemory
           git clone https://github.com/MJx0/KittyMemory.git deps/KittyMemory
           
       - name: Build Tweak
