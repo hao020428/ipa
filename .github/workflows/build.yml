@@ -17,6 +17,10 @@ jobs:
       - name: Setup Theos
         uses: Randomblock1/theos-action@v1
 
+      - name: Force Update Submodules
+        run: git submodule update --init --recursive
+        shell: bash
+
       - name: Debug File System Before Copy
         run: |
           echo "--- Current Working Directory: $(pwd) ---"
