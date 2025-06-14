@@ -62,24 +62,42 @@ jobs:
         echo "Directory structure:"
         find . -type d -maxdepth 3 | sort
         
-        # 搜索并正确处理Utils目录
-        find . -name "ProgressUtils.hpp" -exec dirname {} \;
+        # 检查原始包含关系
+        if [ -f "Tweak/src/Dumper.hpp" ]; then
+          echo "Original ProgressCallback definition in Dumper.hpp:"
+          grep -A 2 "ProgressCallback" Tweak/src/Dumper.hpp
+        fi
         
-        # 创建一个临时的ProgressUtils.hpp文件
+        # 创建一个与实际需求匹配的ProgressUtils.hpp文件
         mkdir -p Tweak/src/Utils
         
-        # 写入一个基本的ProgressUtils实现
+        # 写入正确的ProgressUtils实现
         cat > Tweak/src/Utils/ProgressUtils.hpp << 'EOF'
         #pragma once
         #include <iostream>
-        
-        using ProgressCallback = void (*)(float);
-        
+        #include <functional>
+
         class SimpleProgressBar {
+        private:
+            int _max;
+            int _current;
+            int _lastPercent;
+        
         public:
-            SimpleProgressBar(int max) {}
-            void update(int val) {}
+            SimpleProgressBar(int max) : _max(max), _current(0), _lastPercent(0) {}
+            
+            void update(int val) {
+                _current = val;
+                _lastPercent = static_cast<int>((_current * 100.0) / _max);
+            }
+            
+            int getPercentage() const {
+                return _lastPercent;
+            }
         };
+        
+        // 使用std::function作为回调类型，以匹配Dumper.hpp中的定义
+        using ProgressCallback = std::function<void(const SimpleProgressBar&)>;
         EOF
         
         # 修复符号链接
@@ -90,6 +108,10 @@ jobs:
         
         echo "Updated directory structure:"
         find Tweak -type f | sort
+        
+        # 检查新创建的文件
+        echo "Contents of new ProgressUtils.hpp:"
+        cat Tweak/src/Utils/ProgressUtils.hpp
 
     - name: Configure build
       run: |
@@ -111,9 +133,20 @@ jobs:
         ls -la src
         ls -la src/Utils
         make clean || echo "Clean failed, continuing anyway"
-        make package || echo "Build failed"
+        
+        # 尝试构建
+        make package || {
+          echo "First build attempt failed, checking for more errors"
+          # 检查汇编错误
+          find . -name "*.s" -exec cat {} \; 2>/dev/null || echo "No assembly files found"
+          # 检查前置文件
+          find . -name "*.i" -exec cat {} \; 2>/dev/null | grep -A 5 -B 5 "ProgressUtils" || echo "No preprocessed files with ProgressUtils found"
+          echo "Build failed"
+          exit 1
+        }
     
     - name: Archive production artifacts
+      if: success()
       uses: actions/upload-artifact@v4
       with:
         name: UEDumper-package
