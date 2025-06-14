@@ -28,7 +28,7 @@ jobs:
           rm -rf deps/KittyMemory
           git clone https://github.com/MJx0/KittyMemory.git deps/KittyMemory
       
-      - name: Force Overwrite Makefile with The One True Correct Version
+      - name: Force Overwrite Makefile
         env:
           MAKEFILE_CONTENT: |
             TARGET := iphone:clang:latest:14.0
@@ -39,15 +39,14 @@ jobs:
 
             TWEAK_NAME = UEDumper
 
-            # --- Source Files ---
             DEPS_PATH = ../deps
-            KITTYMEMORY_PATH = $(DEPS_PATH)/KittyMemory # Corrected path
+            KITTYMEMORY_PATH = $(DEPS_PATH)/KittyMemory
 
+            # Source Files
             KITTYMEMORY_SRC = $(wildcard $(KITTYMEMORY_PATH)/*.cpp)
             MINIZIP_SRC = $(wildcard $(DEPS_PATH)/SSZipArchive/minizip/*.c)
             DEPS_SRC = $(KITTYMEMORY_SRC) $(DEPS_PATH)/fmt/format.cc $(DEPS_PATH)/SSZipArchive/SSZipArchive.m $(MINIZIP_SRC)
 
-            # Explicitly list source files, excluding ProgressUtils.cpp, matching the original's intent.
             TWEAK_SRC_FILES = \
             	src/Tweak.mm \
             	src/Dumper.cpp \
@@ -59,31 +58,25 @@ jobs:
 
             $(TWEAK_NAME)_FILES = $(TWEAK_SRC_FILES) $(DEPS_SRC)
 
-            # --- Compiler Flags ---
-            # Correctly set for each language, with all necessary include paths.
+            # Compiler Flags
             COMMON_INCLUDES = -Isrc -I$(DEPS_PATH) -I$(DEPS_PATH)/KittyMemory -I$(DEPS_PATH)/SSZipArchive
-            COMMON_FLAGS = -fobjc-arc -Wno-deprecated-declarations -Wno-unused-function
-
-            C_DEFINES = -DHAVE_INTTYPES_H -DHAVE_PKCRYPT -DHAVE_STDINT_H -DHAVE_WZAES -DHAVE_ZLIB
-            $(TWEAK_NAME)_CFLAGS += $(COMMON_FLAGS) $(C_DEFINES) $(COMMON_INCLUDES)
-
-            CPP_FLAGS = -std=c++17 -O2 -DkNO_KEYSTONE -DkNO_SUBSTRATE
-            $(TWEAK_NAME)_CXXFLAGS = $(COMMON_FLAGS) $(CPP_FLAGS) $(COMMON_INCLUDES)
+            $(TWEAK_NAME)_CXXFLAGS = -std=c++17 -fobjc-arc -O2 -Wno-deprecated-declarations -Wno-unused-function $(COMMON_INCLUDES)
             $(TWEAK_NAME)_OBJCXXFLAGS = $($(TWEAK_NAME)_CXXFLAGS)
-
-            RPM_USE_MEMCPY = 1
-            ifeq ($(RPM_USE_MEMCPY), 1)
-                $(TWEAK_NAME)_CXXFLAGS += -DRPM_USE_MEMCPY
-                $(TWEAK_NAME)_OBJCXXFLAGS += -DRPM_USE_MEMCPY
-            endif
-
-            # --- Linker Flags ---
+            $(TWEAK_NAME)_CFLAGS = -fobjc-arc -Wno-deprecated-declarations -Wno-unused-function $(COMMON_INCLUDES) -DHAVE_INTTYPES_H -DHAVE_PKCRYPT -DHAVE_STDINT_H -DHAVE_WZAES -DHAVE_ZLIB
+            
+            # Linker Flags
             $(TWEAK_NAME)_LDFLAGS = -lz -liconv -ldl
             $(TWEAK_NAME)_FRAMEWORKS = UIKit Foundation Security Network QuartzCore
 
-            # --- Final include ---
             include $(THEOS_MAKE_PATH)/tweak.mk
         run: echo "$MAKEFILE_CONTENT" > Tweak/Makefile
+      
+      - name: ULTIMATE DEBUG - Show Final File System Layout
+        run: |
+          echo "--- Current Working Directory: $(pwd) ---"
+          echo "--- Full recursive file listing ---"
+          ls -laR
+          echo "-----------------------------------"
 
       - name: Build Tweak
         run: |
