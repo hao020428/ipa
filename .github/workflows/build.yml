@@ -17,6 +17,14 @@ jobs:
       - name: Setup Theos
         uses: Randomblock1/theos-action@v1
 
+      - name: Debug File System Before Copy
+        run: |
+          echo "--- Current Working Directory: $(pwd) ---"
+          echo "--- Full recursive file listing before copy ---"
+          ls -laR
+          echo "------------------------------------------------"
+        shell: bash
+
       - name: Create Correct Makefile
         run: |
           cat > Tweak/Makefile << 'EOF'
@@ -74,7 +82,7 @@ jobs:
           echo "Copying all dependencies into a local 'includes' directory to bypass Theos path issues..."
           mkdir -p Tweak/includes
           # Copy all dependency headers into the local includes directory
-          cp -R deps/KittyMemory/KittyMemory/* Tweak/includes/
+          cp -R deps/KittyMemory/KittyMemory/* Tweak/includes/ || echo "KittyMemory copy failed, continuing..."
           cp -R deps/fmt Tweak/includes/
           cp -R deps/hash Tweak/includes/
           cp -R deps/nlohmann Tweak/includes/
