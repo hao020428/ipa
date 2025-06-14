@@ -40,25 +40,47 @@ jobs:
         echo "THEOS_DEVICE_PORT=2222" >> $GITHUB_ENV
         echo "PATH=$HOME/theos/bin:$PATH" >> $GITHUB_ENV
     
+    - name: Check directory structure
+      run: |
+        echo "Working directory: $(pwd)"
+        ls -la
+        if [ -d "iOS_UEDumper-main" ]; then
+          echo "Found iOS_UEDumper-main directory"
+          ls -la iOS_UEDumper-main
+        fi
+        if [ -d "Tweak" ]; then
+          echo "Found Tweak directory at root level"
+          ls -la Tweak
+        fi
+        # 查找所有Tweak目录
+        find . -type d -name "Tweak" | xargs -I{} echo "Found Tweak directory: {}"
+    
     - name: Build project
       run: |
-        cd iOS_UEDumper-main/Tweak
+        # 动态查找Tweak目录
+        TWEAK_DIR=$(find . -type d -name "Tweak" | head -n 1)
+        if [ -z "$TWEAK_DIR" ]; then
+          echo "Error: Could not find Tweak directory"
+          exit 1
+        fi
+        echo "Found Tweak directory at: $TWEAK_DIR"
+        cd "$TWEAK_DIR"
         make package
     
     - name: Archive production artifacts
-      uses: actions/upload-artifact@v4  # 更新到v4版本
+      uses: actions/upload-artifact@v4
       with:
         name: UEDumper-package
         path: |
-          iOS_UEDumper-main/Tweak/packages/*.deb
+          **/packages/*.deb
     
     - name: Create Release
       if: startsWith(github.ref, 'refs/tags/')
       id: create_release
-      uses: softprops/action-gh-release@v2  # 使用更现代的release action
+      uses: softprops/action-gh-release@v2
       with:
         files: |
-          iOS_UEDumper-main/Tweak/packages/*.deb
+          **/packages/*.deb
         name: Release ${{ github.ref_name }}
         draft: false
         prerelease: false 
