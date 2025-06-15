@@ -1,0 +1,79 @@
+name: iOS Build
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:  # 允许手动触发
+
+jobs:
+  build:
+    name: Build iOS App
+    runs-on: macos-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Setup Theos
+      run: |
+        echo "Setting up Theos environment..."
+        brew install ldid make xz dpkg
+        git clone --recursive https://github.com/theos/theos.git $HOME/theos
+        echo "THEOS=$HOME/theos" > ~/.bash_profile
+        echo "PATH=$HOME/theos/bin:$PATH" >> ~/.bash_profile
+        source ~/.bash_profile
+        curl -LO https://github.com/theos/sdks/archive/master.zip
+        unzip master.zip
+        mkdir -p $HOME/theos/sdks
+        mv sdks-master/*.sdk $HOME/theos/sdks/
+        rm -rf sdks-master master.zip
+
+    - name: Setup iOS SDK
+      run: |
+        echo "Downloading iOS SDK..."
+        mkdir -p $HOME/theos/sdks
+        curl -LO https://github.com/theos/sdks/archive/refs/heads/master.zip
+        unzip -q master.zip
+        mv sdks-master/*.sdk $HOME/theos/sdks/
+        rm -rf master.zip sdks-master
+
+    - name: Build Project
+      run: |
+        echo "Building project..."
+        export THEOS=$HOME/theos
+        export PATH=$THEOS/bin:$PATH
+        make clean
+        make
+        make ipa
+
+    - name: Upload IPA Artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: FloatingMenu
+        path: FloatingMenu.ipa
+        retention-days: 7
+
+    - name: Create Release
+      id: create_release
+      if: startsWith(github.ref, 'refs/tags/')
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ github.ref }}
+        release_name: Release ${{ github.ref }}
+        draft: false
+        prerelease: false
+
+    - name: Upload Release Asset
+      if: startsWith(github.ref, 'refs/tags/')
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./FloatingMenu.ipa
+        asset_name: FloatingMenu.ipa
+        asset_content_type: application/octet-stream
