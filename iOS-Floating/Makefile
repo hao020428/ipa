@@ -5,14 +5,19 @@ CC = clang
 CXX = clang++
 LD = clang++
 
-FRAMEWORKS = -framework UIKit -framework Foundation -framework QuartzCore -framework CoreGraphics -framework Metal -framework MetalKit
+FRAMEWORKS = -framework UIKit -framework Foundation -framework QuartzCore -framework CoreGraphics -framework Metal -framework MetalKit -framework ModelIO
 
 SYSROOT = $(THEOS)/sdks/iPhoneOS14.5.sdk
 
-CFLAGS = -fobjc-arc -miphoneos-version-min=14.0 -isysroot $(SYSROOT)
-OBJCFLAGS = -fobjc-arc -miphoneos-version-min=14.0 -isysroot $(SYSROOT)
-CXXFLAGS = -std=c++11 -fobjc-arc -miphoneos-version-min=14.0 -isysroot $(SYSROOT) -stdlib=libc++ -I$(SYSROOT)/usr/include/c++/v1
-LDFLAGS = -fobjc-arc -miphoneos-version-min=14.0 -isysroot $(SYSROOT) $(FRAMEWORKS) -stdlib=libc++
+# 系统级头文件路径
+SYSTEM_INCLUDES = -I$(SYSROOT)/usr/include -I/usr/local/opt/llvm/include/c++/v1
+
+# 更完整的编译标志
+COMMON_FLAGS = -fobjc-arc -miphoneos-version-min=14.0 -isysroot $(SYSROOT)
+CFLAGS = $(COMMON_FLAGS)
+OBJCFLAGS = $(COMMON_FLAGS)
+CXXFLAGS = -std=c++11 $(COMMON_FLAGS) -stdlib=libc++ $(SYSTEM_INCLUDES)
+LDFLAGS = $(COMMON_FLAGS) $(FRAMEWORKS) -stdlib=libc++ -L/usr/local/opt/llvm/lib
 
 SRC_DIR = src
 INCLUDE_DIR = include
@@ -45,7 +50,7 @@ ipa: $(TARGET)
 	mkdir -p build/Payload/$(TARGET).app
 	cp $(TARGET) build/Payload/$(TARGET).app/
 	cp Info.plist build/Payload/$(TARGET).app/
-	cp -r Resources/* build/Payload/$(TARGET).app/
+	cp -r Resources/* build/Payload/$(TARGET).app/ 2>/dev/null || :
 	cd build && zip -r ../$(TARGET).ipa Payload
 	rm -rf build
 
