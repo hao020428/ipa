@@ -30,6 +30,13 @@ jobs:
         mv sdks-master/*.sdk $HOME/theos/sdks/
         rm -rf sdks-master master.zip
 
+    - name: Install C++ Development Tools
+      run: |
+        echo "Installing C++ development tools..."
+        brew install llvm
+        echo 'export PATH="/usr/local/opt/llvm/bin:$PATH"' >> ~/.bash_profile
+        source ~/.bash_profile
+
     - name: Build Project
       run: |
         echo "Building project..."
@@ -53,4 +60,4 @@ jobs:
       with:
         files: iOS-Floating/FloatingMenu.ipa
       env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} 
