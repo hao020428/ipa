@@ -30,15 +30,6 @@ jobs:
         mv sdks-master/*.sdk $HOME/theos/sdks/
         rm -rf sdks-master master.zip
 
-    - name: Setup iOS SDK
-      run: |
-        echo "Downloading iOS SDK..."
-        mkdir -p $HOME/theos/sdks
-        curl -LO https://github.com/theos/sdks/archive/refs/heads/master.zip
-        unzip -q master.zip
-        mv sdks-master/*.sdk $HOME/theos/sdks/
-        rm -rf master.zip sdks-master
-
     - name: Build Project
       run: |
         echo "Building project..."
@@ -62,4 +53,4 @@ jobs:
       with:
         files: iOS-Floating/FloatingMenu.ipa
       env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} 
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
