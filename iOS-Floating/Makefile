@@ -7,10 +7,12 @@ LD = clang++
 
 FRAMEWORKS = -framework UIKit -framework Foundation -framework QuartzCore -framework CoreGraphics -framework Metal -framework MetalKit
 
-CFLAGS = -fobjc-arc -miphoneos-version-min=14.0 -isysroot $(THEOS)/sdks/iPhoneOS14.5.sdk
-OBJCFLAGS = -fobjc-arc -miphoneos-version-min=14.0 -isysroot $(THEOS)/sdks/iPhoneOS14.5.sdk
-CXXFLAGS = -std=c++11 -fobjc-arc -miphoneos-version-min=14.0 -isysroot $(THEOS)/sdks/iPhoneOS14.5.sdk -stdlib=libc++
-LDFLAGS = -fobjc-arc -miphoneos-version-min=14.0 -isysroot $(THEOS)/sdks/iPhoneOS14.5.sdk $(FRAMEWORKS) -stdlib=libc++
+SYSROOT = $(THEOS)/sdks/iPhoneOS14.5.sdk
+
+CFLAGS = -fobjc-arc -miphoneos-version-min=14.0 -isysroot $(SYSROOT)
+OBJCFLAGS = -fobjc-arc -miphoneos-version-min=14.0 -isysroot $(SYSROOT)
+CXXFLAGS = -std=c++11 -fobjc-arc -miphoneos-version-min=14.0 -isysroot $(SYSROOT) -stdlib=libc++ -I$(SYSROOT)/usr/include/c++/v1
+LDFLAGS = -fobjc-arc -miphoneos-version-min=14.0 -isysroot $(SYSROOT) $(FRAMEWORKS) -stdlib=libc++
 
 SRC_DIR = src
 INCLUDE_DIR = include
