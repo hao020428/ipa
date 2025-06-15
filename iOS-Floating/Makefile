@@ -9,8 +9,8 @@ FRAMEWORKS = -framework UIKit -framework Foundation -framework QuartzCore -frame
 
 CFLAGS = -fobjc-arc -miphoneos-version-min=14.0 -isysroot $(THEOS)/sdks/iPhoneOS14.5.sdk
 OBJCFLAGS = -fobjc-arc -miphoneos-version-min=14.0 -isysroot $(THEOS)/sdks/iPhoneOS14.5.sdk
-CXXFLAGS = -std=c++11 -fobjc-arc -miphoneos-version-min=14.0 -isysroot $(THEOS)/sdks/iPhoneOS14.5.sdk
-LDFLAGS = -fobjc-arc -miphoneos-version-min=14.0 -isysroot $(THEOS)/sdks/iPhoneOS14.5.sdk $(FRAMEWORKS)
+CXXFLAGS = -std=c++11 -fobjc-arc -miphoneos-version-min=14.0 -isysroot $(THEOS)/sdks/iPhoneOS14.5.sdk -stdlib=libc++
+LDFLAGS = -fobjc-arc -miphoneos-version-min=14.0 -isysroot $(THEOS)/sdks/iPhoneOS14.5.sdk $(FRAMEWORKS) -stdlib=libc++
 
 SRC_DIR = src
 INCLUDE_DIR = include
@@ -49,4 +49,4 @@ ipa: $(TARGET)
 
 # 安装
 install: ipa
-	ideviceinstaller -i $(TARGET).ipa 
+	ideviceinstaller -i $(TARGET).ipa
