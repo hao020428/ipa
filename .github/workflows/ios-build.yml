@@ -16,27 +16,29 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Setup Theos
+    - name: Setup Theos and SDK
       run: |
         echo "Setting up Theos environment..."
         brew install ldid make xz dpkg
+        
+        # 克隆theos仓库
         git clone --recursive https://github.com/theos/theos.git $HOME/theos
+        
+        # 设置环境变量
         echo "THEOS=$HOME/theos" > ~/.bash_profile
         echo "PATH=$HOME/theos/bin:$PATH" >> ~/.bash_profile
         source ~/.bash_profile
-        curl -LO https://github.com/theos/sdks/archive/master.zip
-        unzip master.zip
-        mkdir -p $HOME/theos/sdks
-        mv sdks-master/*.sdk $HOME/theos/sdks/
-        rm -rf sdks-master master.zip
-
-    - name: Setup iOS SDK
-      run: |
+        
+        # 下载SDK文件
         echo "Downloading iOS SDK..."
         mkdir -p $HOME/theos/sdks
-        curl -LO https://github.com/theos/sdks/archive/refs/heads/master.zip
+        curl -LO https://github.com/theos/sdks/archive/master.zip
         unzip -q master.zip
-        mv sdks-master/*.sdk $HOME/theos/sdks/
+        
+        # 使用cp命令代替mv命令来避免"目录不为空"错误
+        cp -R sdks-master/* $HOME/theos/sdks/
+        
+        # 清理下载的文件
         rm -rf master.zip sdks-master
 
     - name: Build Project
